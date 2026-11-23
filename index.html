@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Template 3D</title>
+  <style>
+    /* Ubah warna tema di sini */
+    :root {
+      --bg: #f5f5f5;
+      --text: #1a1a1a;
+      --accent: #6c5ce7;
+      --surface: #ffffff;
+      --border: #e0e0e0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --text: #e0e0e0;
+        --surface: #1e1e1e;
+        --border: #333;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s, color 0.3s;
+    }
+    #three-container {
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+
+    .css-section {
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    #three-container canvas {
+      display: block;
+    }
+    .scene {
+      width: 200px;
+      height: 200px;
+      margin: 80px auto;
+      perspective: 800px;
+      animation: spinY 12s linear infinite;
+    }
+    .cube {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      transform-style: preserve-3d;
+      animation: spinX 12s linear infinite;
+    }
+    .face {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .face:nth-child(1) { transform: rotateY(0deg) translateZ(100px); }
+    .face:nth-child(2) { transform: rotateY(90deg) translateZ(100px); }
+    .face:nth-child(3) { transform: rotateY(180deg) translateZ(100px); }
+    .face:nth-child(4) { transform: rotateY(270deg) translateZ(100px); }
+    .face:nth-child(5) { transform: rotateX(90deg) translateZ(100px); }
+    .face:nth-child(6) { transform: rotateX(-90deg) translateZ(100px); }
+    @keyframes spinX {
+      from { transform: rotateX(0deg) rotateY(0deg); }
+      to   { transform: rotateX(360deg) rotateY(360deg); }
+    }
+    @keyframes spinY {
+      from { transform: rotateY(0deg); }
+      to   { transform: rotateY(360deg); }
+    }
+</style>
+</head>
+<body>
+
+<div id="three-container"></div>
+
+<section class="css-section">
+  <h2>Kubus CSS 3D</h2>
+  <div class="scene">
+    <div class="cube">
+      <div class="face front">1</div>
+      <div class="face back">2</div>
+      <div class="face right">3</div>
+      <div class="face left">4</div>
+      <div class="face top">5</div>
+      <div class="face bottom">6</div>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+// Scene
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+// Camera: FOV 75, aspect dari window, posisi z 5
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 5;
+
+// Renderer: antialias on, attach ke #three-container
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.getElementById('three-container').appendChild(renderer.domElement);
+
+// AmbientLight: fill lembut menyeluruh
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambient);
+
+// DirectionalLight: key light dari kanan-atas
+const dir = new THREE.DirectionalLight(0xffffff, 1);
+dir.position.set(5, 5, 5);
+scene.add(dir);
+
+
+// Resize handling
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+
+// Geometri icosahedron radius 1.5
+const geometry = new THREE.IcosahedronGeometry(1.5, 0);
+
+// Material standar, warna ungu, flat shading
+const material = new THREE.MeshStandardMaterial({
+  color: 0x6c5ce7,
+  flatShading: true
+});
+
+// Mesh bernama mesh, tambahkan ke scene
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
+
+// ubah kecepatan putar di sini
+const rotationSpeed = 0.005;
+
+// Target posisi input, awal 0
+let targetX = 0;
+let targetY = 0;
+
+// Mousemove: simpan posisi ternormalisasi -1..1
+window.addEventListener('mousemove', (e) => {
+  targetX = (e.clientX / window.innerWidth) * 2 - 1;
+  targetY = (e.clientY / window.innerHeight) * 2 - 1;
+});
+
+// Touchmove: normalisasi sentuhan -1..1
+window.addEventListener('touchmove', (e) => {
+  const t = e.touches[0];
+  targetX = (t.clientX / window.innerWidth) * 2 - 1;
+  targetY = (t.clientY / window.innerHeight) * 2 - 1;
+});
+
+// Fungsi animasi: rotasi mesh + parallax kamera
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Putar mesh di sumbu x dan y
+  mesh.rotation.x += rotationSpeed;
+  mesh.rotation.y += rotationSpeed;
+
+  // Lerp posisi kamera menuju target (efek parallax)
+  camera.position.x += (targetX - camera.position.x) * 0.05;
+  camera.position.y += (targetY - camera.position.y) * 0.05;
+
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
